@@ -17,6 +17,8 @@ Versiones:
   
 + Versión de scikit-learn: 1.4.2
 
+Instalación de Librerias:
+
 pip install numpy matplotlib pandas  scikit-learn
 
 # Este proyecto muestra la visualización de la imputación de valores faltantes utilizando el método de KNN.
