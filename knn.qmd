@@ -1,0 +1,301 @@
+---
+title: "Imputación KNN"
+date: today
+jupyter: python3
+author: Ing Gabriel Chávez Camargo
+format: #multiples Formatos 
+
+  html: #CREA UN HTML
+    toc: true #Tabla de contenidos
+    code-fold: true
+    
+  pdf: #Crea un pdf
+    toc: true
+  
+ # docx: #Crea un documento word
+   # toc: true
+  # 
+  # revealjs: #Presentación dividimos con ---
+  #   toc: true
+  #   echo: true #salen las celdas de codigo de la presentación 
+  #   chalkboard: true
+
+highlight: "zenburn" # Estilo de resaltado de código (puedes probar "zenburn" o "tango")
+theme: "fancy"
+execute: 
+ 
+  freeze: true
+---
+
+\newpage
+
+# Imputación KNN
+
+El algoritmo de k vecinos más cercanos, también conocido como KNN o k-NN, es un clasificador de aprendizaje supervisado no paramétrico, que utiliza la proximidad para hacer clasificaciones o predicciones sobre la agrupación de un punto de datos individual.
+
+![](https://bookdown.org/dparedesi/data-science-con-r/img/kNN-classify.png){fig-align="center" width="300"}
+
+Importamos la librerías utilizadas:
+
+```{python}
+import numpy  as np 
+import matplotlib.pyplot as plt
+import pandas as pd
+```
+
+## Versiones utilizadas
+
+-   Versión de NumPy: 1.26.4
+
+-   Versión de matplotlib: 3.8.3
+
+-   Versión de pandas: 2.2.1
+
+-   Versión de python: 3.11.3
+
+-   Versión de scikit-learn: 1.4.2
+
+\newpage
+
+## Instalación de liberias
+
+pip install numpy matplotlib pandas
+
+## Generación de los Datos
+
+1.  Generación de datos sintéticos para demostrar la imputación mediante el algoritmo de vecinos más cercanos (k-NN).
+
+```{python}
+antiguedad_inmueble = np.array([5, 10, 15, 20, 25,
+                                10, 15, 20, 25, 30,
+                                15, 20, 25, 30, 35,
+                                40, 45, 50, 55, 60,
+                                55, 60, 65, 70, 75])
+zona_inmubele=np.array([6,6,7,7,8,
+               8,9,10,10,10,
+               11,11,11,11,12,
+               14,16,16,16,16,
+               16,17,19,19,22])
+
+precio_inmueble=np.array([11230,9624,13798,3215,19169,
+               14982,15419,17286,14232,18092,
+               18318,16260,22347,16710,28949,
+               27309,32779,29743,30341,34088,
+               32435,33909,32263,42067,42295])
+
+datos=np.stack((antiguedad_inmueble,zona_inmubele,precio_inmueble),axis=1)
+
+datos
+
+data_frame_inmueble = pd.DataFrame({"antiguedad": antiguedad_inmueble,
+                                    "zona": zona_inmubele,
+                                    "precio": precio_inmueble}) 
+
+```
+
+Visualizamos los valores del Data Frame
+
+```{python}
+   data_frame_inmueble.head(1) 
+```
+
+Visualizamos gráficamente nuestros valores
+
+```{python}
+fig=plt.figure(figsize=(4,4))
+ax=fig.add_subplot(1,1,1, projection="3d")
+ax.scatter(
+          data_frame_inmueble["antiguedad"].values,
+          data_frame_inmueble["zona"].values,
+          data_frame_inmueble["precio"].values,
+          marker="o",c="purple",s=500,alpha=0.25)
+
+ax.scatter(
+          data_frame_inmueble["antiguedad"].values,
+          data_frame_inmueble["zona"].values,
+          data_frame_inmueble["precio"].values,
+          marker=".",c="black",s=300)
+
+ax.set_xlabel("Antiguedad" ,fontsize=9,color="blue")
+ax.set_ylabel("Zona Inmueble",color="blue")
+ax.set_zlabel("Precio ($)",color="blue")
+plt.tight_layout() 
+plt.show()
+```
+
+\newpage
+
+## Escalamiento de los datos
+
+Todas las características deben considerarse igualmente importantes antes de la ejecución del algoritmo. Este problema se puede solucionar con el escalado de características.
+
+En este caso hay una clase sklearn dedicada para la estandarización de datos que se llama StandardScaler. Está en el módulo sklearn.preprocessing.
+
+Importa StandardScaler de la librería:
+
+from sklearn.preprocessing import MinMaxScaler
+
+```{python}
+
+from sklearn.preprocessing import MinMaxScaler
+
+```
+
+$$X\_{\text{escalado}} = \frac{{X - X_{\text{mín}}}}{{X_{\text{máx}} - X_{\text{mín}}}}$$
+
+-   X_esc: El valor escalado de la característica X. Después de aplicar MinMaxScaler, los valores de la característica X estarán en un rango específico, generalmente entre 0 y 1.
+-   X: El valor original de la característica que queremos escalar.
+-   X_min: El valor mínimo de la característica en el conjunto de datos. Representa el valor más pequeño que puede tomar la característica.
+-   X_max: El valor máximo de la característica en el conjunto de datos. Representa el valor más grande que puede tomar la característica.
+
+Pero... ¿Nuestras variables cambian al hacer el escalamiento de los datos? @fig-polar.
+
+```{python}
+#| label: fig-polar
+#| fig-cap: "Los datos realmente no cambian la escala es de 0 y 1"
+#escalamos los datos
+escalador=MinMaxScaler()
+escalados=escalador.fit_transform(data_frame_inmueble.values)
+escalados=pd.DataFrame(escalados,columns=data_frame_inmueble.columns)
+#Visualizamos los datos
+fig=plt.figure(figsize=(12,12))
+ax=fig.add_subplot(1,2,1, projection="3d")
+ax.scatter(
+          escalados["antiguedad"].values,
+          escalados["zona"].values,
+          escalados["precio"].values,
+          marker="o",c="purple",s=600,alpha=0.25)
+
+ax.set_title("Datos escalados")
+ax.set_xlabel("Antiguedad" ,fontsize=9,color="blue")
+ax.set_ylabel("Zona Inmueble",color="blue")
+ax.set_zlabel("Precio ($)",color="blue")
+
+ax=fig.add_subplot(1,2,2, projection="3d")
+ax.scatter(datos.T[0],datos.T[1],datos.T[2],
+           marker="o",c="Blue",s=600,alpha=0.25)
+ax.set_title("Datos Originales")
+ax.set_xlabel("Antiguedad" ,fontsize=9,color="blue")
+ax.set_ylabel("Zona Inmueble",color="blue")
+ax.set_zlabel("Precio ($)",color="blue")
+plt.show()
+```
+
+Como podemos observar un escalamiento de los datos no los modifica pero la diferencia es que a todas las características las consideramos igualmente importantes antes de la ejecución del algoritmo.
+
+```{python}
+# visualizacion de datos escalados
+escalados.head(2)  
+```
+
+\newpage
+
+Crearemos datos faltantes a diferentes filas, en nuestro data frame escalado.
+
+```{python}
+faltantes=escalados.values.copy()
+faltantes[[2,7,12,17,22],2]=np.nan
+```
+
+Visualizamos los datos con valores Nulos
+
+```{python}
+print(faltantes)
+```
+
+\newpage
+
+# **Imputación KNN**
+
+La clase KNNImputer del módulo sklearn.impute en scikit-learn se utiliza para imputar valores faltantes en un conjunto de datos utilizando el algoritmo de k vecinos más cercanos (KNN). Este imputador reemplaza los valores faltantes utilizando los k vecinos más cercanos en el espacio de características.
+
+```         
+from sklearn.impute import KNNImputer
+```
+
+En este caso utilizaremos los dos parámetros:
+
+"uniform": Todos los vecinos más cercanos tienen el mismo peso al imputar el valor faltante. Esto significa que cada vecino contribuye igualmente a la imputación del valor faltante.
+
+"distance": Los vecinos más cercanos tienen un peso inversamente proporcional a su distancia al punto con el valor faltante. Esto significa que los vecinos más cercanos tienen más influencia en la imputación que los vecinos más lejanos.
+
+```{python}
+from sklearn.impute import KNNImputer
+
+# Knn uniform
+
+imputer=KNNImputer(n_neighbors=5, weights="uniform")
+imputer_uniform=imputer.fit_transform(faltantes)
+# Knn Distance
+imputer=KNNImputer(n_neighbors=5, weights="distance")
+
+imputer_distance=imputer.fit_transform(faltantes)
+
+```
+
+Visualización de los dos arrays
+
+```{python}
+
+print(np.stack((imputer_uniform,imputer_distance),axis=1)[:3])
+
+```
+
+Como podemos observar, ya no hay valores nulos en las diferentes filas después de aplicar la imputación y se observan diferentes valores \[:3\]. Sin embargo, para tener una mejor comprensión visual de los valores imputados, vamos a representarlos gráficamente.
+
+```{python}
+
+fig=plt.figure(figsize=(8,8))
+filtro=~np.isnan(faltantes.T[2])
+ax=fig.add_subplot(1,1,1, projection="3d")
+#Graficamos los valores Originales
+ax.scatter(
+            escalados["antiguedad"].values[filtro],
+          escalados["zona"].values[filtro],
+          escalados["precio"].values[filtro],
+           label="Originales",
+           marker="o",c="blue",s=600,alpha=0.15)
+
+#Graficamos los valores faltantes
+ax.scatter(escalados["antiguedad"].values[~filtro],
+          escalados["zona"].values[~filtro],
+          escalados["precio"].values[~filtro],
+           label="NaN/Ausentes",
+           marker="*",c="cyan",s=800,alpha=0.65)
+#Graficamos los valores remplazados con uniform
+ax.scatter(imputer_uniform.T[0][~filtro],
+           imputer_uniform.T[1][~filtro],
+           imputer_uniform.T[2][~filtro],
+           label="IMPUTE UNIFORM",
+           marker="D",c="deeppink",s=600)
+#Graficamos los valores remplazados con distance
+ax.scatter(imputer_distance.T[0][~filtro],
+           imputer_distance.T[1][~filtro],
+           imputer_distance.T[2][~filtro],
+           label="IMPUTE distance",
+           marker="s",c="darkorange",s=600)
+
+
+ax.set_xlabel("Antiguedad" ,fontsize=15,color="blue")
+ax.set_ylabel("Zona Inmueble",fontsize=15,color="blue")
+ax.set_zlabel("Precio ($)",fontsize=15,color="blue")
+ax.legend(ncol=4)
+
+
+plt.show()
+
+```
+
+Al observar los resultados, podemos notar la diferencia entre los valores originales, los valores faltantes (NaN), y las aproximaciones generadas por el imputador KNN con las estrategias "Uniform" y "Distance". Es evidente que los valores imputados por KNN tienden a estar muy cerca de nuestros valores faltantes.
+
+\newpage
+
+Fuentes:
+
+[Scikit-Learn](https://scikit-learn.org/stable/modules/generated/sklearn.impute.KNNImputer)
+
+Canales ***data Scientist:***
+
+[en_coders](https://www.youtube.com/@en_coders)
+
+[Codigo Maquina](https://www.youtube.com/@CodigoMaquina)
